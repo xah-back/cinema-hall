@@ -147,7 +147,7 @@ func (h *bookingTransport) CancelBooking(ctx *gin.Context) {
 
 	cancelled, err := h.service.CancelBooking(uint(id))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -155,7 +155,6 @@ func (h *bookingTransport) CancelBooking(ctx *gin.Context) {
 }
 
 func ParseID(idStr string) (uint, error) {
-
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		return 0, constants.ErrInvalidID
