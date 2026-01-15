@@ -1,0 +1,8 @@
+package constants
+
+import "errors"
+
+var ErrBookingNotFound = errors.New("booking not found")
+var ErrBookingFailedUpdate = errors.New("failed update booking")
+var ErrBookingAlreadyCancelled = errors.New("booking already cancelled")
+var ErrBookingExpired = errors.New("the reservation time has expired")

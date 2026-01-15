@@ -29,6 +29,8 @@ func (h *bookingTransport) BookingRoutes(ctx *gin.Engine) {
 		api.GET("/:id", h.GetByID)
 		api.PATCH("/:id", h.Update)
 		api.DELETE("/:id", h.Delete)
+		api.POST("/:id/confirm", h.ConfirmBooking)
+		api.POST("/:id/cancel", h.CancelBooking)
 	}
 }
 
@@ -120,4 +122,38 @@ func (h *bookingTransport) Delete(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "booking deleted"})
+}
+
+func (h *bookingTransport) ConfirmBooking(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	confirmed, err := h.service.ConfirmBooking(uint(id))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, confirmed)
+}
+
+func (h *bookingTransport) CancelBooking(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	cancelled, err := h.service.CancelBooking(uint(id))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, cancelled)
 }

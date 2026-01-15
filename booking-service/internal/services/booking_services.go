@@ -1,6 +1,7 @@
 package services
 
 import (
+	"booking-service/internal/constants"
 	"booking-service/internal/dto"
 	"booking-service/internal/models"
 	"booking-service/internal/repository"
@@ -14,6 +15,8 @@ type BookingService interface {
 	GetByID(id uint) (*models.Booking, error)
 	Update(id uint, req dto.BookingUpdateRequest) (*models.Booking, error)
 	Delete(id uint) error
+	ConfirmBooking(id uint) (*models.Booking, error)
+	CancelBooking(id uint) (*models.Booking, error)
 }
 
 type bookingService struct {
@@ -86,4 +89,45 @@ func (s *bookingService) Delete(id uint) error {
 	}
 
 	return nil
+}
+
+func (s *bookingService) ConfirmBooking(id uint) (*models.Booking, error) {
+	booking, err := s.bookingRepo.GetByID(id)
+	if err != nil {
+		return nil, constants.ErrBookingNotFound
+	}
+
+	if booking.BookingStatus == "pending" {
+		booking.BookingStatus = constants.Confirmed
+		err = s.bookingRepo.Update(booking.ID, *booking)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return booking, nil
+}
+
+func (s *bookingService) CancelBooking(id uint) (*models.Booking, error) {
+	booking, err := s.bookingRepo.GetByID(id)
+	if err != nil {
+		return nil, constants.ErrBookingNotFound
+	}
+
+	if booking.BookingStatus == constants.Expired {
+		return nil, constants.ErrBookingExpired
+	}
+
+	if booking.BookingStatus == constants.Cancelled {
+		return nil, constants.ErrBookingAlreadyCancelled
+	}
+
+	booking.BookingStatus = constants.Cancelled
+
+	err = s.bookingRepo.Update(booking.ID, *booking)
+	if err != nil {
+		return nil, err
+	}
+
+	return booking, nil
 }
