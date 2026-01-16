@@ -131,7 +131,7 @@ func (h *bookingTransport) ConfirmBooking(ctx *gin.Context) {
 
 	confirmed, err := h.service.ConfirmBooking(uint(id))
 	if err != nil {
-		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -147,7 +147,7 @@ func (h *bookingTransport) CancelBooking(ctx *gin.Context) {
 
 	cancelled, err := h.service.CancelBooking(uint(id))
 	if err != nil {
-		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 

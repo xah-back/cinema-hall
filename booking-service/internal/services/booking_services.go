@@ -97,11 +97,14 @@ func (s *bookingService) ConfirmBooking(id uint) (*models.Booking, error) {
 		return nil, constants.ErrBookingNotFound
 	}
 
-	if booking.BookingStatus == constants.Expired {
+	switch booking.BookingStatus {
+	case constants.Expired:
 		return nil, constants.ErrBookingExpired
-	}
-
-	if booking.BookingStatus == constants.Pending {
+	case constants.Cancelled:
+		return nil, constants.ErrBookingAlreadyCancelled
+	case constants.Confirmed:
+		return nil, constants.ErrBookingAlreadyConfirmed
+	case constants.Pending:
 		booking.BookingStatus = constants.Confirmed
 		err = s.bookingRepo.Update(booking.ID, *booking)
 		if err != nil {
@@ -118,12 +121,12 @@ func (s *bookingService) CancelBooking(id uint) (*models.Booking, error) {
 		return nil, constants.ErrBookingNotFound
 	}
 
-	if booking.BookingStatus == constants.Expired {
+	switch booking.BookingStatus {
+	case constants.Expired:
 		return nil, constants.ErrBookingExpired
-	}
-
-	if booking.BookingStatus == constants.Cancelled {
+	case constants.Cancelled:
 		return nil, constants.ErrBookingAlreadyCancelled
+
 	}
 
 	booking.BookingStatus = constants.Cancelled
