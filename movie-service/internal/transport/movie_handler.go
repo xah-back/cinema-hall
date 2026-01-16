@@ -109,11 +109,6 @@ func (h *MovieHandler) NowShowing(ctx *gin.Context) {
 		return
 	}
 
-	if len(movies) == 0 {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "no now showing movies"})
-		return
-	}
-
 	ctx.JSON(http.StatusOK, movies)
 
 }
@@ -125,11 +120,6 @@ func (h *MovieHandler) ComingSoon(ctx *gin.Context) {
 	if err != nil {
 		h.logger.Error("failed to get coming soon movies", slog.Any("error", err))
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get coming soon movies"})
-		return
-	}
-
-	if len(movies) == 0 {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "no coming soon movies"})
 		return
 	}
 
