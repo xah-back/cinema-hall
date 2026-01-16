@@ -3,6 +3,7 @@ package transport
 import (
 	"net/http"
 	"strconv"
+	"user-service/internal/config"
 	"user-service/internal/dto"
 	"user-service/internal/models"
 	"user-service/internal/services"
@@ -56,7 +57,13 @@ func (h *UserHandler) Get(c *gin.Context) {
 }
 
 func (h *UserHandler) List(c *gin.Context) {
-	users, _ := h.service.List()
+	users, err := h.service.List()
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 	resp := make([]dto.UserResponse, 0)
 	for _, u := range users {
 		resp = append(resp, toUserResponse(&u))
@@ -65,7 +72,13 @@ func (h *UserHandler) List(c *gin.Context) {
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "invalid user id",
+		})
+		return
+	}
 	var req dto.UpdateUserRequest
 
 	c.ShouldBindJSON(&req)
@@ -79,7 +92,12 @@ func (h *UserHandler) Update(c *gin.Context) {
 }
 
 func (h *UserHandler) Delete(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "invalid user id",
+		})
+	}
 	if err := h.service.Delete(uint(id)); err != nil {
 		c.JSON(404, gin.H{"error": "not found"})
 		return
@@ -114,7 +132,7 @@ func (h *UserHandler) Me(c *gin.Context) {
 func (h *UserHandler) MyBookings(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	url := "http://localhost:8081/bookings/user/" + strconv.Itoa(int(userID))
+	url := config.BookingServiceURL() + "/bookings/user/" + strconv.Itoa(int(userID))
 
 	resp, err := http.Get(url)
 	if err != nil {

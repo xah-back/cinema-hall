@@ -33,4 +33,6 @@ func main() {
 	r := gin.Default()
 	transport.RegisterRouters(r, authHandler, userHandler)
 
+	r.Run(":8080")
+
 }
