@@ -135,10 +135,11 @@ func (s *bookingService) CancelBooking(id uint) (*models.Booking, error) {
 		return nil, constants.ErrBookingExpired
 	case constants.Cancelled:
 		return nil, constants.ErrBookingAlreadyCancelled
-
+	case constants.Pending:
+		booking.BookingStatus = constants.Cancelled
+	default:
+		return nil, constants.ErrInvalidBookingStatus
 	}
-
-	booking.BookingStatus = constants.Cancelled
 
 	err = s.bookingRepo.Update(booking.ID, *booking)
 	if err != nil {
