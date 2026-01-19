@@ -37,7 +37,7 @@ func (r *gormBookingRepository) Create(booking *models.Booking) (*models.Booking
 func (r *gormBookingRepository) List() ([]models.Booking, error) {
 	var bookings []models.Booking
 
-	if err := r.db.Find(&bookings).Error; err != nil {
+	if err := r.db.Preload("BookedSeats").Find(&bookings).Error; err != nil {
 		log.Errorf("failed to get bookings list")
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (r *gormBookingRepository) List() ([]models.Booking, error) {
 func (r *gormBookingRepository) GetByID(id uint) (*models.Booking, error) {
 	var booking models.Booking
 
-	if err := r.db.First(&booking, id).Error; err != nil {
+	if err := r.db.Preload("BookedSeats").First(&booking, id).Error; err != nil {
 		log.Errorf("failed to get booking by id")
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"booking-service/internal/models"
 	"booking-service/internal/repository"
 	"errors"
+	"time"
 
 	"github.com/gofiber/fiber/v2/log"
 )
@@ -21,19 +22,24 @@ type BookingService interface {
 }
 
 type bookingService struct {
-	bookingRepo repository.BookingRepository
+	bookingRepo     repository.BookingRepository
+	bookingSeatRepo repository.BookingSeatRepository
 }
 
-func NewBookingService(bookingRepo repository.BookingRepository) BookingService {
+func NewBookingService(bookingRepo repository.BookingRepository, bookingSeatRepo repository.BookingSeatRepository) BookingService {
 	return &bookingService{
-		bookingRepo: bookingRepo,
+		bookingRepo:     bookingRepo,
+		bookingSeatRepo: bookingSeatRepo,
 	}
 }
 
 func (s *bookingService) Create(req dto.BookingCreateRequest) (*models.Booking, error) {
 	var booking = models.Booking{
-		SessionID: req.SessionID,
-		UserID:    req.UserID,
+		SessionID:     req.SessionID,
+		UserID:        req.UserID,
+		BookingStatus: constants.Pending,
+		PaymentStatus: constants.PaymentPending,
+		ExpiresAt:     time.Now().Add(constants.BookingTimeoutMinutes * time.Minute),
 	}
 
 	newBooking, err := s.bookingRepo.Create(&booking)
@@ -42,7 +48,18 @@ func (s *bookingService) Create(req dto.BookingCreateRequest) (*models.Booking, 
 		return nil, err
 	}
 
-	return newBooking, nil
+	err = s.bookingSeatRepo.Create(newBooking.ID, req.SeatsID)
+	if err != nil {
+		log.Errorf("failed to create booked seats: %v", err)
+		return nil, err
+	}
+
+	bookingWithSeats, err := s.bookingRepo.GetByID(newBooking.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return bookingWithSeats, nil
 }
 
 func (s *bookingService) List() ([]models.Booking, error) {
