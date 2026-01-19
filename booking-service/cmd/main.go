@@ -31,8 +31,9 @@ func main() {
 	infrastructure.InitKafkaWriter()
 
 	bookingRepo := repository.NewBookingRepository(db)
+	bookingSeatRepo := repository.NewBookingSeatRepository(db)
 
-	bookingService := services.NewBookingService(bookingRepo)
+	bookingService := services.NewBookingService(bookingRepo, bookingSeatRepo)
 
 	transport.RegisterRoutes(router, bookingService)
 
