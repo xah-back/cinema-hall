@@ -50,7 +50,7 @@ func (h *SeatHandler) Create(c *gin.Context) {
 	}
 	seat, err := h.seatService.Create(uint(id), req)
 	if err != nil {
-		h.logger.Error("failed to fetch seats")
+		h.logger.Error("failed to create seat")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

@@ -37,8 +37,13 @@ func NewSeatService(
 
 func (s *seatService) Create(hallID uint, req dto.CreateSeatRequest) (*models.Seat, error) {
 
-	if req.Row <= 0 || req.Number <= 0 {
-		return nil, ErrInvalidSeatData
+	if _, err := s.hallRepo.GetById(hallID); err != nil {
+		s.logger.Warn(
+			"hall not found while creating seat",
+			"hall_id", hallID,
+			"error", err,
+		)
+		return nil, err
 	}
 
 	seat := &models.Seat{
@@ -95,7 +100,7 @@ func (s *seatService) List() ([]models.Seat, error) {
 		return nil, err
 	}
 	if len(seats) == 0 {
-		s.logger.Info("service: no halls")
+		s.logger.Info("service: no seats")
 	}
 	return seats, nil
 }
@@ -103,9 +108,9 @@ func (s *seatService) List() ([]models.Seat, error) {
 func (s seatService) Delete(id uint) error {
 	err := s.seatRepo.Delete(id)
 	if err != nil {
-		s.logger.Error("failed to delete hall", "id", id)
+		s.logger.Error("failed to delete seat", "id", id)
 		return err
 	}
-	s.logger.Info("hall deleted successfully", "id", id)
+	s.logger.Info("seat deleted successfully", "id", id)
 	return nil
 }
