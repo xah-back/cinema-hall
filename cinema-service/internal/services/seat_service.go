@@ -4,11 +4,8 @@ import (
 	"cinema-service/internal/dto"
 	"cinema-service/internal/models"
 	"cinema-service/internal/repository"
-	"errors"
 	"log/slog"
 )
-
-var ErrInvalidSeatData = errors.New("invalid seat data")
 
 type SeatService interface {
 	Create(hallID uint, req dto.CreateSeatRequest) (*models.Seat, error)
