@@ -12,14 +12,12 @@ import (
 
 type SeatHandler struct {
 	seatService services.SeatService
-	hallService services.HallService
 	logger      *slog.Logger
 }
 
-func NewSeatHandler(seatService services.SeatService, hallService services.HallService, logger *slog.Logger) *SeatHandler {
+func NewSeatHandler(seatService services.SeatService, logger *slog.Logger) *SeatHandler {
 	return &SeatHandler{
 		seatService: seatService,
-		hallService: hallService,
 		logger:      logger,
 	}
 }
@@ -82,7 +80,7 @@ func (h *SeatHandler) Patch(c *gin.Context) {
 	}
 	seat, err := h.seatService.UpdateSeat(uint(id), req)
 	if err != nil {
-		h.logger.Error("failed to fetch halls")
+		h.logger.Error("failed to update seat")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

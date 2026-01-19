@@ -16,7 +16,7 @@ func RegisterRoutes(
 ) {
 
 	hallHandler := NewHallHandler(hallService, logger)
-	seatHandler := NewSeatHandler(seatService, hallService, logger)
+	seatHandler := NewSeatHandler(seatService, logger)
 
 	hallHandler.RegisterRoutes(router)
 	seatHandler.RegisterRoutes(router)
