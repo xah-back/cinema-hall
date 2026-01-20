@@ -21,7 +21,7 @@ func GetSession(sessionID uint) (*dto.SessionResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Cinema Service вернул статус %d", resp.StatusCode)
+		return nil, fmt.Errorf("cinema service returned status %d for session %d", resp.StatusCode, sessionID)
 	}
 
 	body, err := io.ReadAll(resp.Body)

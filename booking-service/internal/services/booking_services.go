@@ -41,9 +41,6 @@ func (s *bookingService) Create(req dto.BookingCreateRequest) (*models.Booking, 
 		log.Errorf("failed to get session: %v", err)
 		return nil, fmt.Errorf("session not found")
 	}
-	if session == nil {
-		return nil, fmt.Errorf("session not found")
-	}
 
 	if session.StartTime.Before(time.Now()) {
 		return nil, fmt.Errorf("session already started")
@@ -142,7 +139,7 @@ func (s *bookingService) ConfirmBooking(id uint) (*models.Booking, error) {
 		return nil, err
 	}
 
-	if booking.ExpiresAt.Before(time.Now()) {
+	if !booking.ExpiresAt.After(time.Now()) {
 		return nil, constants.ErrBookingExpired
 	}
 

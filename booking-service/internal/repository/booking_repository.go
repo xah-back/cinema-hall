@@ -94,16 +94,10 @@ func (r *gormBookingRepository) CheckBooked(sessionID uint, seatIDs []uint) ([]u
 		return nil, err
 	}
 
-	bookedMap := make(map[uint]bool)
-	for _, seat := range bookedSeats {
-		bookedMap[seat.SeatID] = true
-	}
+	var bookedSeatIDs = []uint{}
 
-	var bookedSeatIDs []uint
-	for _, seatID := range seatIDs {
-		if bookedMap[seatID] {
-			bookedSeatIDs = append(bookedSeatIDs, seatID)
-		}
+	for _, seat := range bookedSeats {
+		bookedSeatIDs = append(bookedSeatIDs, seat.SeatID)
 	}
 
 	return bookedSeatIDs, nil
