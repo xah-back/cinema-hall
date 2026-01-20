@@ -16,16 +16,28 @@ func RegisterRouters(r *gin.Engine,
 		authGroup.POST("/register", auth.Register)
 		authGroup.POST("/login", auth.Login)
 	}
-	user := r.Group("/users")
+
+	admin := r.Group("/admin")
+	admin.Use(middleware.JWTMiddleware())
+	admin.Use(middleware.AdminMiddleware())
 	{
-		user.POST("", users.Create)
-		user.GET("", users.List)
-		user.GET("/:id", users.Get)
-		user.PUT("/:id", users.Update)
-		user.DELETE("/:id", users.Delete)
+		// admin.POST("", users.Create)
+		admin.DELETE("/:id", users.Delete)
+		admin.PUT("/:id", users.Update)
+
 	}
 
-	protected := r.Group("/users")
+	user := r.Group("/users")
+	user.Use(middleware.JWTMiddleware())
+
+	{
+		user.GET("", users.List)
+		user.GET("/:id", users.Get)
+		user.DELETE("/:id", users.Delete)
+		user.PUT("/:id", users.Update)
+	}
+
+	protected := r.Group("")
 	protected.Use(middleware.JWTMiddleware())
 
 	{

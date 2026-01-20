@@ -1,11 +1,13 @@
 package services
 
 import (
+	"errors"
 	"user-service/internal/dto"
 	"user-service/internal/models"
 	"user-service/internal/repository"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type UserService interface {
@@ -47,7 +49,15 @@ func (s *userService) Create(req dto.CreateUserRequest) (*models.User, error) {
 }
 
 func (s *userService) Get(id uint) (*models.User, error) {
-	return s.repo.GetByID(id)
+	user, err := s.repo.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *userService) List() ([]models.User, error) {
@@ -57,6 +67,9 @@ func (s *userService) List() ([]models.User, error) {
 func (s *userService) Update(id uint, req dto.UpdateUserRequest) (*models.User, error) {
 	user, err := s.repo.GetByID(id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
 		return nil, err
 	}
 
@@ -73,6 +86,8 @@ func (s *userService) Update(id uint, req dto.UpdateUserRequest) (*models.User, 
 
 func (s *userService) Delete(id uint) error {
 	_, err := s.repo.GetByID(id)
+	// ErrUserNotFound
+
 	if err != nil {
 		return err
 	}

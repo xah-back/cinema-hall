@@ -149,6 +149,3 @@ func (h *UserHandler) MyBookings(c *gin.Context) {
 		nil,
 	)
 }
-
-// admin := r.Group("/users")
-// admin.Use(AuthMiddleware(), AdminOnly())
