@@ -353,21 +353,40 @@ func (s *bookingService) FreeSeatsForEndedSessions() error {
 			continue
 		}
 
-		if err := s.bookingSeatRepo.DeleteByBookingID(tx, booking.ID); err != nil {
+		currentBooking, err := s.bookingRepo.GetByIDWithTx(tx, booking.ID)
+		if err != nil {
 			tx.Rollback()
-			config.GetLogger().Error("Failed to delete seats for ended session",
-				"error", err, "booking_id", booking.ID, "session_id", booking.SessionID)
+			config.GetLogger().Error("Failed to get booking for ended session",
+				"error", err, "booking_id", booking.ID)
 			continue
 		}
 
-		if booking.BookingStatus != constants.Expired {
-			booking.BookingStatus = constants.Expired
-			if err := s.bookingRepo.UpdateWithTx(tx, booking.ID, booking); err != nil {
-				tx.Rollback()
-				config.GetLogger().Error("Failed to update booking status for ended session",
-					"error", err, "booking_id", booking.ID)
-				continue
-			}
+		var finalStatus constants.BookingStatus
+		switch currentBooking.BookingStatus {
+		case constants.Pending:
+			finalStatus = constants.Expired
+		case constants.Confirmed:
+			finalStatus = constants.Finished
+		default:
+			tx.Rollback()
+			config.GetLogger().Info("Booking already processed, skipping",
+				"booking_id", booking.ID, "status", currentBooking.BookingStatus)
+			continue
+		}
+
+		currentBooking.BookingStatus = finalStatus
+		if err := s.bookingRepo.UpdateWithTx(tx, currentBooking.ID, *currentBooking); err != nil {
+			tx.Rollback()
+			config.GetLogger().Error("Failed to update booking status for ended session",
+				"error", err, "booking_id", booking.ID, "final_status", finalStatus)
+			continue
+		}
+
+		if err := s.bookingSeatRepo.DeleteByBookingID(tx, currentBooking.ID); err != nil {
+			tx.Rollback()
+			config.GetLogger().Error("Failed to delete seats for ended session",
+				"error", err, "booking_id", booking.ID, "session_id", currentBooking.SessionID)
+			continue
 		}
 
 		if err := tx.Commit().Error; err != nil {
@@ -378,7 +397,10 @@ func (s *bookingService) FreeSeatsForEndedSessions() error {
 		}
 
 		config.GetLogger().Info("Seats freed for ended session",
-			"booking_id", booking.ID, "session_id", booking.SessionID)
+			"booking_id", booking.ID,
+			"session_id", currentBooking.SessionID,
+			"old_status", booking.BookingStatus,
+			"new_status", finalStatus)
 	}
 
 	return nil
