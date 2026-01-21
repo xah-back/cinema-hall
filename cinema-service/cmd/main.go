@@ -20,6 +20,7 @@ func main() {
 	if err := db.AutoMigrate(
 		&models.Hall{},
 		&models.Seat{},
+		&models.Session{},
 	); err != nil {
 		log.Error("failed to migrate database", "error", err)
 		os.Exit(1)
@@ -34,11 +35,13 @@ func main() {
 
 	hallRepo := repository.NewHallRepository(db, logger)
 	seatRepo := repository.NewSeatRepository(db, logger)
+	sessionRepo := repository.NewSessionRepository(db, logger)
 
 	hallService := services.NewHallService(hallRepo, logger)
 	seatService := services.NewSeatService(seatRepo, hallRepo, logger)
+	sessionService := services.NewSessionService(sessionRepo, hallRepo, logger)
 
-	transport.RegisterRoutes(r, logger, hallService, seatService)
+	transport.RegisterRoutes(r, logger, hallService, seatService, sessionService)
 
 	if err := r.Run(":" + port); err != nil {
 		log.Error("не удалось запустить сервер", slog.Any("error", err))
