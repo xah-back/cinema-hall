@@ -20,10 +20,12 @@ type BookingService interface {
 	GetByID(id uint) (*models.Booking, error)
 	Update(id uint, req dto.BookingUpdateRequest) (*models.Booking, error)
 	Delete(id uint) error
+
 	ConfirmBooking(id uint) (*models.Booking, error)
 	CancelBooking(id uint) (*models.Booking, error)
 	ExpireOldBookings() error
 	FreeSeatsForEndedSessions() error
+	ExpireBooking(id uint) (*models.Booking, error)
 }
 
 type bookingService struct {
@@ -252,6 +254,57 @@ func (s *bookingService) CancelBooking(id uint) (*models.Booking, error) {
 	return booking, nil
 }
 
+func (s *bookingService) ExpireBooking(id uint) (*models.Booking, error) {
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	booking, err := s.bookingRepo.GetByIDWithTx(tx, id)
+	if err != nil {
+		if errors.Is(err, constants.ErrBookingNotFound) {
+			tx.Rollback()
+			return nil, constants.ErrBookingNotFound
+		}
+		tx.Rollback()
+		return nil, err
+	}
+
+	if booking.BookingStatus != constants.Pending {
+		tx.Rollback()
+		return nil, fmt.Errorf("booking is not in pending status: %s", booking.BookingStatus)
+	}
+
+	booking.BookingStatus = constants.Expired
+
+	err = s.bookingRepo.UpdateWithTx(tx, booking.ID, *booking)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := s.bookingSeatRepo.DeleteByBookingID(tx, booking.ID); err != nil {
+		tx.Rollback()
+		config.GetLogger().Error("Failed to delete seats for expired booking",
+			"error", err, "booking_id", booking.ID)
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return booking, nil
+}
+
 func (s *bookingService) ExpireOldBookings() error {
 	expiredBookings, err := s.bookingRepo.FindExpiredPendingBookings()
 	if err != nil {
@@ -263,26 +316,17 @@ func (s *bookingService) ExpireOldBookings() error {
 		return nil
 	}
 
-	config.GetLogger().Info("Found expired bookings to cancel", "count", len(expiredBookings))
+	config.GetLogger().Info("Found expired bookings to expire", "count", len(expiredBookings))
 
 	for _, booking := range expiredBookings {
-
-		_, err := s.CancelBooking(booking.ID)
+		_, err := s.ExpireBooking(booking.ID)
 		if err != nil {
-			config.GetLogger().Error("Failed to cancel expired booking",
-				"error", err, "booking_id", booking.ID)
-
-			continue
-		}
-
-		booking.BookingStatus = constants.Expired
-		if err := s.bookingRepo.Update(booking.ID, booking); err != nil {
-			config.GetLogger().Error("Failed to update booking status to expired",
+			config.GetLogger().Error("Failed to expire booking",
 				"error", err, "booking_id", booking.ID)
 			continue
 		}
 
-		config.GetLogger().Info("Expired booking cancelled and seats freed",
+		config.GetLogger().Info("Expired booking processed and seats freed",
 			"booking_id", booking.ID, "session_id", booking.SessionID)
 	}
 
@@ -309,7 +353,6 @@ func (s *bookingService) FreeSeatsForEndedSessions() error {
 			continue
 		}
 
-		// Удаляем места для завершенных сеансов
 		if err := s.bookingSeatRepo.DeleteByBookingID(tx, booking.ID); err != nil {
 			tx.Rollback()
 			config.GetLogger().Error("Failed to delete seats for ended session",
@@ -317,8 +360,7 @@ func (s *bookingService) FreeSeatsForEndedSessions() error {
 			continue
 		}
 
-		// Обновляем статус на Expired, если еще не Expired или Cancelled
-		if booking.BookingStatus != constants.Expired && booking.BookingStatus != constants.Cancelled {
+		if booking.BookingStatus != constants.Expired {
 			booking.BookingStatus = constants.Expired
 			if err := s.bookingRepo.UpdateWithTx(tx, booking.ID, booking); err != nil {
 				tx.Rollback()
