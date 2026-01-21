@@ -14,6 +14,9 @@ type Booking struct {
 	PaymentStatus constants.PaymentStatus `json:"payment_status" gorm:"default:pending;index"`
 	ExpiresAt     time.Time               `json:"expires_at" gorm:"not null;index"`
 	BookedSeats   []BookedSeat            `json:"booked_seats" gorm:"foreignKey:BookingID"`
+
+	SessionStartTime time.Time `json:"session_start_time" gorm:"not null;index"`
+	SessionEndTime   time.Time `json:"session_end_time" gorm:"not null;index"`
 }
 
 type BookedSeat struct {

@@ -11,7 +11,7 @@ import (
 const cinemaServiceUrl = "http://localhost:8082"
 
 func GetSession(sessionID uint) (*dto.SessionResponse, error) {
-	url := fmt.Sprintf("%s/session/%d", cinemaServiceUrl, sessionID)
+	url := fmt.Sprintf("%s/sessions/%d", cinemaServiceUrl, sessionID)
 
 	resp, err := http.Get(url)
 	if err != nil {

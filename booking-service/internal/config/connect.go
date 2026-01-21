@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -12,7 +11,7 @@ import (
 
 func Connect() *gorm.DB {
 	if err := godotenv.Load(); err != nil {
-		log.Errorf("failed to load env %v", err)
+		GetLogger().Warn("Failed to load .env file, using environment variables", "error", err)
 	}
 
 	host := os.Getenv("DB_HOST")
@@ -30,7 +29,7 @@ func Connect() *gorm.DB {
 	}), &gorm.Config{})
 
 	if err != nil {
-		log.Error("Failed to initialize database", "error", err)
+		GetLogger().Error("Failed to initialize database", "error", err, "host", host, "dbname", dbname)
 		panic(err)
 	}
 
