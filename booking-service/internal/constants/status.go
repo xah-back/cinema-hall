@@ -7,6 +7,7 @@ const (
 	Confirmed BookingStatus = "confirmed"
 	Cancelled BookingStatus = "cancelled"
 	Expired   BookingStatus = "expired"
+	Finished  BookingStatus = "finished"
 )
 
 type PaymentStatus string
@@ -17,5 +18,5 @@ const (
 )
 
 const (
-	BookingTimeoutMinutes = 15
+	BookingTimeoutMinutes = 2
 )

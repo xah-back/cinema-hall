@@ -1,12 +1,12 @@
 package transport
 
 import (
+	"booking-service/internal/config"
 	"booking-service/internal/constants"
 	"booking-service/internal/dto"
 	"booking-service/internal/infrastructure"
 	"booking-service/internal/services"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -40,20 +40,26 @@ func (h *bookingTransport) Create(ctx *gin.Context) {
 	var req dto.BookingCreateRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		config.GetLogger().Warn("Invalid JSON in booking request", "error", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 		return
 	}
 
+	config.GetLogger().Info("Creating booking", "session_id", req.SessionID, "user_id", req.UserID, "seats", req.SeatsID)
+
 	booking, err := h.service.Create(req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		config.GetLogger().Error("Failed to create booking", "error", err, "session_id", req.SessionID, "user_id", req.UserID, "seats", req.SeatsID)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	config.GetLogger().Info("Booking created successfully", "booking_id", booking.ID, "session_id", booking.SessionID, "user_id", booking.UserID)
 
 	if err := infrastructure.PublishOrderCreated(*booking); err != nil {
 		// Если не удалось отправить — логируем, но не отменяем заказ
 		// Заказ уже создан, клиент получит успешный ответ
-		log.Printf("Ошибка отправки в Kafka: %v", err)
+		config.GetLogger().Error("Failed to publish event to Kafka", "error", err, "booking_id", booking.ID)
 	}
 
 	ctx.JSON(http.StatusOK, booking)
@@ -62,7 +68,8 @@ func (h *bookingTransport) Create(ctx *gin.Context) {
 func (h *bookingTransport) List(ctx *gin.Context) {
 	list, err := h.service.List()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		config.GetLogger().Error("Failed to list bookings", "error", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -72,13 +79,15 @@ func (h *bookingTransport) List(ctx *gin.Context) {
 func (h *bookingTransport) GetByID(ctx *gin.Context) {
 	id, err := parseID(ctx.Param("id"))
 	if err != nil {
+		config.GetLogger().Warn("Invalid booking ID in request", "error", err, "id_param", ctx.Param("id"))
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
 	booking, err := h.service.GetByID(uint(id))
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		config.GetLogger().Error("Failed to get booking by ID", "error", err, "booking_id", id)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -88,6 +97,7 @@ func (h *bookingTransport) GetByID(ctx *gin.Context) {
 func (h *bookingTransport) Update(ctx *gin.Context) {
 	id, err := parseID(ctx.Param("id"))
 	if err != nil {
+		config.GetLogger().Warn("Invalid booking ID in update request", "error", err, "id_param", ctx.Param("id"))
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
@@ -95,13 +105,15 @@ func (h *bookingTransport) Update(ctx *gin.Context) {
 	var req dto.BookingUpdateRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		config.GetLogger().Warn("Invalid JSON in update request", "error", err, "booking_id", id)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 		return
 	}
 
 	booking, err := h.service.Update(uint(id), req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		config.GetLogger().Error("Failed to update booking", "error", err, "booking_id", id)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -111,15 +123,18 @@ func (h *bookingTransport) Update(ctx *gin.Context) {
 func (h *bookingTransport) Delete(ctx *gin.Context) {
 	id, err := parseID(ctx.Param("id"))
 	if err != nil {
+		config.GetLogger().Warn("Invalid booking ID in delete request", "error", err, "id_param", ctx.Param("id"))
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
 	if err := h.service.Delete(uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		config.GetLogger().Error("Failed to delete booking", "error", err, "booking_id", id)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	config.GetLogger().Info("Booking deleted successfully", "booking_id", id)
 	ctx.JSON(http.StatusOK, gin.H{"message": "booking deleted"})
 }
 

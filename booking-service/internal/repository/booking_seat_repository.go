@@ -1,9 +1,9 @@
 package repository
 
 import (
+	"booking-service/internal/config"
 	"booking-service/internal/models"
 
-	"github.com/gofiber/fiber/v2/log"
 	"gorm.io/gorm"
 )
 
@@ -33,7 +33,7 @@ func (r *gormBookingSeat) Create(tx *gorm.DB, bookingID uint, seatList []uint) e
 	}
 
 	if err := tx.Create(&bookedSeats).Error; err != nil {
-		log.Errorf("failed to create booked seats: %v", err)
+		config.GetLogger().Error("Failed to create booked seats", "error", err, "booking_id", bookingID, "seats", seatList)
 		return err
 	}
 
@@ -42,7 +42,7 @@ func (r *gormBookingSeat) Create(tx *gorm.DB, bookingID uint, seatList []uint) e
 
 func (r *gormBookingSeat) DeleteByBookingID(tx *gorm.DB, bookingID uint) error {
 	if err := tx.Where("booking_id = ?", bookingID).Delete(&models.BookedSeat{}).Error; err != nil {
-		log.Errorf("failed to delete booked seats by booking_id: %v", err)
+		config.GetLogger().Error("Failed to delete booked seats by booking_id", "error", err, "booking_id", bookingID)
 		return err
 	}
 

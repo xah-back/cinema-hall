@@ -7,33 +7,48 @@ import (
 	"booking-service/internal/repository"
 	"booking-service/internal/services"
 	"booking-service/internal/transport"
+	"booking-service/internal/workers"
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
 )
 
 func main() {
+	// Инициализация логгера
+	logger := config.InitLogger()
+	logger.Info("Starting booking-service")
+
+	// Подключение к базе данных
 	db := config.Connect()
 
 	router := gin.Default()
 
 	if db == nil {
-		log.Error("database is nil")
+		logger.Error("Database connection failed: database is nil")
 		return
 	}
 
+	logger.Info("Database connected successfully")
+
+	// Автомиграция
 	if err := db.AutoMigrate(&models.Booking{}, &models.BookedSeat{}); err != nil {
-		log.Error("failed to migrate database", err)
+		logger.Error("Failed to migrate database", "error", err)
 		os.Exit(1)
 	}
 
-	infrastructure.InitKafkaWriter()
+	logger.Info("Database migration completed")
 
+	// Инициализация Kafka
+	infrastructure.InitKafkaWriter()
+	logger.Info("Kafka writer initialized")
+
+	// Инициализация репозиториев и сервисов
 	bookingRepo := repository.NewBookingRepository(db)
 	bookingSeatRepo := repository.NewBookingSeatRepository(db)
-
 	bookingService := services.NewBookingService(bookingRepo, bookingSeatRepo, db)
+
+	go workers.StartExpiredBookingsWorker(bookingService)
+	go workers.StartEndedSessionsWorker(bookingService)
 
 	transport.RegisterRoutes(router, bookingService)
 
@@ -42,7 +57,10 @@ func main() {
 		port = "8081"
 	}
 
+	logger.Info("Server starting", "port", port)
+
 	if err := router.Run(":" + port); err != nil {
-		log.Error("ошибка запуска сервера")
+		logger.Error("Failed to start server", "error", err)
+		os.Exit(1)
 	}
 }

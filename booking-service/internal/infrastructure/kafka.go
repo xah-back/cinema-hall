@@ -1,12 +1,12 @@
 package infrastructure
 
 import (
+	"booking-service/internal/config"
 	"booking-service/internal/dto"
 	"booking-service/internal/models"
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 
@@ -28,7 +28,7 @@ func createTopic() {
 	// Устанавливаем соединение с Kafka
 	conn, err := kafka.Dial("tcp", kafkaBroker)
 	if err != nil {
-		log.Printf("Ошибка подключения к Kafka: %v", err)
+		config.GetLogger().Error("Failed to connect to Kafka", "error", err, "broker", kafkaBroker)
 		return
 	}
 	defer conn.Close()
@@ -36,14 +36,14 @@ func createTopic() {
 	// Получаем информацию о контроллере кластера
 	controller, err := conn.Controller()
 	if err != nil {
-		log.Printf("Ошибка получения контроллера: %v", err)
+		config.GetLogger().Error("Failed to get Kafka controller", "error", err)
 		return
 	}
 
 	// Подключаемся к контроллеру для создания топика
 	controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
 	if err != nil {
-		log.Printf("Ошибка подключения к контроллеру: %v", err)
+		config.GetLogger().Error("Failed to connect to Kafka controller", "error", err, "host", controller.Host, "port", controller.Port)
 		return
 	}
 	defer controllerConn.Close()
@@ -58,9 +58,9 @@ func createTopic() {
 	// Создаём топик (если уже существует — ошибка будет проигнорирована)
 	err = controllerConn.CreateTopics(topicConfig)
 	if err != nil {
-		log.Printf("Топик '%s' уже существует или ошибка создания: %v", kafkaTopic, err)
+		config.GetLogger().Warn("Kafka topic already exists or creation failed", "topic", kafkaTopic, "error", err)
 	} else {
-		log.Printf("Топик '%s' успешно создан", kafkaTopic)
+		config.GetLogger().Info("Kafka topic created successfully", "topic", kafkaTopic)
 	}
 }
 
@@ -77,7 +77,7 @@ func InitKafkaWriter() {
 		// Балансировщик определяет, в какую партицию отправить сообщение
 		Balancer: &kafka.LeastBytes{},
 	}
-	log.Println("Kafka Writer инициализирован")
+	config.GetLogger().Info("Kafka writer initialized", "topic", kafkaTopic, "broker", kafkaBroker)
 }
 
 // publishOrderCreated отправляет событие о создании заказа в Kafka
@@ -111,6 +111,6 @@ func PublishOrderCreated(booking models.Booking) error {
 		return err // Если не удалось отправить — возвращаем ошибку
 	}
 
-	log.Printf("Событие отправлено в Kafka: booking-%d", booking.ID)
+	config.GetLogger().Info("Event published to Kafka", "booking_id", booking.ID, "topic", kafkaTopic)
 	return nil // Всё прошло успешно
 }
