@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"os"
 	"user-service/internal/config"
 	"user-service/internal/kafka"
@@ -24,7 +25,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	userRepo := repository.NewUserRepository(db)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	userRepo := repository.NewUserRepository(db, logger)
 
 	broker := os.Getenv("KAFKA_BROKER")
 	if broker == "" {
@@ -35,10 +37,10 @@ func main() {
 
 	authService := services.NewAuthService(userRepo, producer)
 
-	userService := services.NewUserService(userRepo)
+	userService := services.NewUserService(userRepo, logger)
 
 	authHandler := transport.NewAuthHandler(authService)
-	userHandler := transport.NewUserHandler(userService)
+	userHandler := transport.NewUserHandler(userService, logger)
 
 	r := gin.Default()
 	transport.RegisterRouters(r, authHandler, userHandler)
