@@ -2,27 +2,33 @@ package kafka
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	kafka "github.com/segmentio/kafka-go"
 )
 
-func StartUserCreatedConsumer(broker string) {
+func StartUserCreatedConsumer(ctx context.Context, broker string, log *slog.Logger) {
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{broker},
 		Topic:   "user.created",
 		GroupID: "user-service-debug",
 	})
 
+	defer r.Close()
+
 	go func() {
 		for {
-			msg, err := r.ReadMessage(context.Background())
+			msg, err := r.ReadMessage(ctx)
 			if err != nil {
-				log.Println("kafka read error:", err)
+				if ctx.Err() != nil {
+					log.Info("kafka consumer stopped")
+					return
+				}
+				log.Error("failed to read kafka message", "err:", err)
 				continue
 			}
 
-			log.Println("📨 Kafka message received:", string(msg.Value))
+			log.Info("user created event received", "value", string(msg.Value))
 		}
 	}()
 }
