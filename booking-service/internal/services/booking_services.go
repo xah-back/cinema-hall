@@ -169,7 +169,14 @@ func (s *bookingService) ConfirmBooking(id uint) (*models.Booking, error) {
 		return nil, tx.Error
 	}
 
-	booking, err := s.bookingRepo.GetByID(id)
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	booking, err := s.bookingRepo.GetByIDWithTx(tx, id)
 	if err != nil {
 		if errors.Is(err, constants.ErrBookingNotFound) {
 			tx.Rollback()
@@ -198,7 +205,7 @@ func (s *bookingService) ConfirmBooking(id uint) (*models.Booking, error) {
 	case constants.Pending:
 		booking.BookingStatus = constants.Confirmed
 		booking.PaymentStatus = constants.PaymentPaid
-		err = s.bookingRepo.Update(booking.ID, *booking)
+		err = s.bookingRepo.UpdateWithTx(tx, booking.ID, *booking)
 		if err != nil {
 			tx.Rollback()
 			return nil, err
