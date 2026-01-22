@@ -2,7 +2,10 @@ package main
 
 import (
 	"log"
+	"log/slog"
+	"os"
 	"user-service/internal/config"
+	"user-service/internal/kafka"
 	"user-service/internal/models"
 	"user-service/internal/repository"
 	"user-service/internal/services"
@@ -22,17 +25,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	userRepo := repository.NewUserRepository(db)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	userRepo := repository.NewUserRepository(db, logger)
 
-	authService := services.NewAuthService(userRepo)
-	userService := services.NewUserService(userRepo)
+	broker := os.Getenv("KAFKA_BROKER")
+	if broker == "" {
+		log.Fatal("KAFKA_BROKER is not set")
+	}
+
+	producer := kafka.NewProducer(broker)
+
+	authService := services.NewAuthService(userRepo, producer, logger)
+
+	userService := services.NewUserService(userRepo, logger)
 
 	authHandler := transport.NewAuthHandler(authService)
-	userHandler := transport.NewUserHandler(userService)
+	userHandler := transport.NewUserHandler(userService, logger)
 
 	r := gin.Default()
 	transport.RegisterRouters(r, authHandler, userHandler)
 
-	r.Run(":8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatal(err)
+	}
 
 }
