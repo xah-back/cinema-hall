@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+
 	db := config.Connect()
 	logger := config.InitLogger()
 
