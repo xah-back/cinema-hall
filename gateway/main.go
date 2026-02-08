@@ -100,6 +100,7 @@ func main() {
 		defer resp.Body.Close()
 
 		b, err := io.ReadAll(resp.Body)
+
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{"error": "failed to read response"})
 			return
@@ -116,6 +117,7 @@ func main() {
 		}
 
 		resp, err := httpClient.Do(req)
+
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{"error": "movie service unavailable"})
 			return
@@ -123,6 +125,7 @@ func main() {
 		defer resp.Body.Close()
 
 		b, err := io.ReadAll(resp.Body)
+
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{"error": "failed to read response"})
 			return
